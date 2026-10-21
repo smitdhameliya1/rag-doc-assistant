@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Document Assistant</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem;color:#222}
+.box{border:1px solid #ddd;border-radius:8px;padding:1rem;margin-bottom:1rem}
+#chat{min-height:200px}
+.q{font-weight:600;margin-top:.8rem}.a{white-space:pre-wrap;margin:.3rem 0}
+.src{font-size:.8rem;color:#666}
+input[type=text]{width:70%;padding:.5rem}button{padding:.5rem 1rem;cursor:pointer}
+</style></head><body>
+<h1>AI Document Assistant</h1>
+<div class="box"><b>1. Upload a PDF or TXT</b><br><br>
+<input type="file" id="file" accept=".pdf,.txt"> <button onclick="upload()">Upload</button>
+<div id="status" class="src"></div></div>
+<div class="box"><b>2. Ask a question</b>
+<div id="chat"></div><br>
+<input type="text" id="q" placeholder="Ask about your documents..." onkeydown="if(event.key==='Enter')ask()">
+<button onclick="ask()">Ask</button></div>
+<script>
+async function upload(){
+  const f=document.getElementById('file').files[0],s=document.getElementById('status');
+  if(!f){s.textContent='Choose a file first.';return;}
+  s.textContent='Uploading and indexing...';
+  const fd=new FormData();fd.append('file',f);
+  const r=await fetch('/upload',{method:'POST',body:fd}),d=await r.json();
+  s.textContent=r.ok?`Indexed ${d.chunks_added} chunks from ${d.file}`:`Error: ${d.detail}`;
+}
+async function ask(){
+  const qi=document.getElementById('q'),q=qi.value.trim();if(!q)return;qi.value='';
+  const c=document.getElementById('chat');
+  c.insertAdjacentHTML('beforeend',`<div class="q"></div><div class="a">Thinking...</div><div class="src"></div>`);
+  const n=c.querySelectorAll('.q'),qe=n[n.length-1],ae=qe.nextElementSibling,se=ae.nextElementSibling;
+  qe.textContent='Q: '+q;
+  const r=await fetch('/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})}),d=await r.json();
+  ae.textContent=r.ok?d.answer:'Error: '+d.detail;
+  if(r.ok)se.textContent=d.sources.map(s=>`${s.file} p.${s.page} (${s.score})`).join(' | ');
+}
+</script></body></html>
